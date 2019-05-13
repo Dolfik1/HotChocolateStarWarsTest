@@ -16,5 +16,7 @@ namespace StarWars.Models
         public string HomePlanet { get; set; }
 
         public double Height { get; } = 1.72d;
+
+        public HumanTest Test { get; set; }
     }
 }

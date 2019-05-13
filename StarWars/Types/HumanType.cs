@@ -17,6 +17,9 @@ namespace StarWars.Types
             descriptor.Field(t => t.AppearsIn)
                 .Type<ListType<EpisodeType>>();
 
+            descriptor.Field(t => t.Test)
+                .Type<UrlType>();
+
             descriptor.Field<SharedResolvers>(r => r.GetCharacter(default, default))
                 .Type<ListType<CharacterType>>()
                 .Name("friends");

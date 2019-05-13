@@ -79,7 +79,11 @@ namespace StarWars.Data
                 Name = "Luke Skywalker",
                 Friends = new[] { "1002", "1003", "2000", "2001" },
                 AppearsIn = new[] { Episode.NewHope, Episode.Empire, Episode.Jedi },
-                HomePlanet = "Tatooine"
+                HomePlanet = "Tatooine",
+                Test = new HumanTest
+                {
+                    Uri = new Uri("https://dev.test/")
+                }
             };
 
             yield return new Human

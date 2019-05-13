@@ -1,13 +1,16 @@
+using System;
 using System.Security.Claims;
 using HotChocolate;
 using HotChocolate.AspNetCore;
 using HotChocolate.AspNetCore.Authorization;
 using HotChocolate.AspNetCore.Voyager;
 using HotChocolate.Subscriptions;
+using HotChocolate.Utilities;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using StarWars.Data;
+using StarWars.Models;
 using StarWars.Types;
 
 namespace StarWars
@@ -30,6 +33,11 @@ namespace StarWars
             var eventRegistry = new InMemoryEventRegistry();
             services.AddSingleton<IEventRegistry>(eventRegistry);
             services.AddSingleton<IEventSender>(eventRegistry);
+
+            services.AddSingleton<ITypeConverter, HumanTestConverter>();
+            services.AddSingleton<ITypeConversion, TypeConversion>();
+
+            // TypeConversion.Default.Register<HumanTest, Uri>(x => x.Uri);
 
             // Add GraphQL Services
             services.AddGraphQL(sp => SchemaBuilder.New()
@@ -85,5 +93,21 @@ namespace StarWars
             });
             */
         }
+    }
+
+    public class HumanTestConverter : ITypeConverter
+    {
+        public HumanTestConverter()
+        {
+
+        }
+
+        public object Convert(object source)
+        {
+            return ((HumanTest)source).Uri;
+        }
+
+        public Type From => typeof(HumanTest);
+        public Type To => typeof(Uri);
     }
 }
