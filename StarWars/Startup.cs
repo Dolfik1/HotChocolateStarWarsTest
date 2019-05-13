@@ -1,14 +1,12 @@
-﻿using System.Security.Claims;
-using System.Text;
+using System.Security.Claims;
 using HotChocolate;
 using HotChocolate.AspNetCore;
+using HotChocolate.AspNetCore.Authorization;
+using HotChocolate.AspNetCore.Voyager;
 using HotChocolate.Subscriptions;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.IdentityModel.Tokens;
 using StarWars.Data;
 using StarWars.Types;
 
@@ -20,9 +18,6 @@ namespace StarWars
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            //services.AddSingleton<IAuthorizationService, AuthorizationService>();
-            //services.AddSingleton<IAuthorizationPolicyProvider, AuthorizationPolicyProvider>();
-
             // Add the custom services like repositories etc ...
             services.AddSingleton<CharacterRepository>();
             services.AddSingleton<ReviewRepository>();
@@ -37,45 +32,25 @@ namespace StarWars
             services.AddSingleton<IEventSender>(eventRegistry);
 
             // Add GraphQL Services
-            services.AddGraphQL(sp => Schema.Create(c =>
+            services.AddGraphQL(sp => SchemaBuilder.New()
+                .AddServices(sp)
+                .AddDirectiveType<AuthorizeDirectiveType>()
+                .AddQueryType<QueryType>()
+                .AddMutationType<MutationType>()
+                .AddSubscriptionType<SubscriptionType>()
+                .AddType<HumanType>()
+                .AddType<DroidType>()
+                .AddType<EpisodeType>()
+                .Create());
+
+            // Add Authorization Policies
+            services.AddAuthorization(options =>
             {
-                c.RegisterServiceProvider(sp);
-
-                c.RegisterExtendedScalarTypes();
-
-                // Adds the authorize directive and
-                // enables the authorization middleware.
-                c.RegisterAuthorizeDirectiveType();
-
-                c.RegisterQueryType<QueryType>();
-                c.RegisterMutationType<MutationType>();
-                c.RegisterSubscriptionType<SubscriptionType>();
-
-                c.RegisterType<HumanType>();
-                c.RegisterType<DroidType>();
-                c.RegisterType<EpisodeType>();
-            }));
-
-            services
-                .AddAuthorization()
-                .AddAuthentication(x =>
-                {
-                    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                })
-                .AddJwtBearer(options =>
-                {
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        ValidateIssuer = true,
-                        ValidateAudience = true,
-                        ValidateLifetime = true,
-                        ValidateIssuerSigningKey = true,
-                        ValidIssuer = Constants.JwtIssuer,
-                        ValidAudience = Constants.JwtIssuer,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Constants.JwtKey))
-                    };
-                });
+                options.AddPolicy("HasCountry", policy =>
+                    policy.RequireAssertion(context =>
+                        context.User.HasClaim(c =>
+                            (c.Type == ClaimTypes.Country))));
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -90,6 +65,7 @@ namespace StarWars
             app.UseGraphQL();
             app.UseGraphiQL();
             app.UsePlayground();
+            app.UseVoyager();
 
             /*
             Note: comment app.UseGraphQL("/graphql"); and uncomment this
@@ -97,11 +73,13 @@ namespace StarWars
             passes the configured authorization rule.
             app.UseGraphQL(new QueryMiddlewareOptions
             {
-                OnCreateRequest = (ctx, request, props, ct) =>
+                Path = "/graphql",
+                OnCreateRequest = (ctx, builder, ct) =>
                 {
-                    var identity = new ClaimsIdentity();
+                    var identity = new ClaimsIdentity("abc");
                     identity.AddClaim(new Claim(ClaimTypes.Country, "us"));
-                    ctx.User.AddIdentity(identity);
+                    ctx.User = new ClaimsPrincipal(identity);
+                    builder.SetProperty(nameof(ClaimsPrincipal), ctx.User);
                     return Task.CompletedTask;
                 }
             });

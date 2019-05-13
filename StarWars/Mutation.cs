@@ -26,25 +26,5 @@ namespace StarWars
             await eventSender.SendAsync(new OnReviewMessage(episode, review));
             return review;
         }
-
-        public Task<bool> JwtAuthorizedMutation() => Task.FromResult(true);
-
-        public Task<TokenData> CreateToken(string name, string email)
-        {
-            var accessExpires = DateTimeOffset.Now.AddMinutes(Constants.AccessExpiresMinutes);
-            var refreshExpires = DateTimeOffset.Now.AddMinutes(Constants.RefreshExpiresMinutes);
-
-            var id = Guid.NewGuid().ToString("N");
-            var result = new TokenData
-            {
-                AccessToken = AuthUtility.BuildAccessToken(
-                    id, email, name, accessExpires),
-                RefreshToken = AuthUtility.BuildRefreshToken(
-                    id, email, name, refreshExpires),
-                ExpiresIn = accessExpires
-            };
-
-            return Task.FromResult(result);
-        }
     }
 }
